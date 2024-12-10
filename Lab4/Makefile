@@ -1,47 +1,42 @@
-TARGET:= Legalizer
+TARGET:= D2DGRter
 SRCS:= main.cpp
-CFLAGS:= -std=c++11 -Wall
-INPUTS := ./testcase/testcase1_MBFF_LIB_7000.lg ./testcase/testcase1_16900.lg ./testcase/testcase1_ALL0_5000.lg ./testcase/testcase2_100.lg
-INPUTS2 := ./testcase/testcase1_MBFF_LIB_7000.opt ./testcase/testcase1_16900.opt ./testcase/testcase1_ALL0_5000.opt ./testcase/testcase2_100.opt
-OUTS := testcase1_MBFF_LIB_7000_post.lg testcase1_16900_post.lg testcase1_ALL0_5000_post.lg testcase2_100_post.lg
+CFLAGS:= -std=c++11
+INPUTS := ./testcase0/testcase0.gmp ./testcase1/testcase1.gmp ./testcase2/testcase2.gmp
+INPUTS2 := ./testcase0/testcase0.gcl ./testcase1/testcase1.gcl ./testcase2/testcase2.gcl
+INPUTS3 := ./testcase0/testcase0.cst ./testcase1/testcase1.cst ./testcase2/testcase2.cst
+OUTS := ./testcase0/testcase0.lg ./testcase1/testcase1.lg ./testcase2/testcase2.lg
 
 
-.PHONY: all debug run runall evaluate evaluateall clean
+.PHONY: all  degug run runall evaluate evaluateall clean
 all:$(TARGET)
 
 $(TARGET):$(SRCS)
 	g++ $(CFLAGS) $(SRCS) -lm -O3 -o $(TARGET)
 
-debug: $(TARGET)
-	@input=./testcase/testcase1_ALL0_5000.lg; \
-    input2=./testcase/testcase1_ALL0_5000.opt; \
-    output=testcase1_ALL0_5000_post.lg; \
-    echo "Running with $$input and $$input2, output to $$output..."; \
-    gdb --args ./$(TARGET) $$input $$input2 $$output;
+debug: $(SRCS)
+	g++ $(CFLAGS) $(SRCS) -lm -g -o $(TARGET)
+	gdb --args ./$(TARGET) ./testcase0/testcase0.gmp ./testcase0/testcase0.gcl ./testcase0/testcase0.cst ./testcase0/testcase0.lg
 
 run: $(TARGET)
-	time ./$(TARGET)	./testcase/testcase1_MBFF_LIB_7000.lg	./testcase/testcase1_MBFF_LIB_7000.opt	testcase1_MBFF_LIB_7000_post.lg fordraw.lg
+	time ./$(TARGET) ./testcase0/testcase0.gmp ./testcase0/testcase0.gcl ./testcase0/testcase0.cst ./testcase0/testcase0.lg
 
 runall: $(TARGET)
-	@for i in $(shell seq 0 3); do \
+	@for i in $(shell seq 0 2); do \
 		input=$$(echo $(INPUTS) | cut -d' ' -f$$((i+1))); \
 		input2=$$(echo $(INPUTS2) | cut -d' ' -f$$((i+1))); \
+		input3=$$(echo $(INPUTS3) | cut -d' ' -f$$((i+1))); \
 		output=$$(echo $(OUTS) | cut -d' ' -f$$((i+1))); \
-		echo "Running with $$input and $$input2, output to $$output..."; \
-		time ./$(TARGET) $$input $$input2 $$output; \
+		echo "Running with $$input and $$input2 and $$input3, output to $$output..."; \
+		time ./$(TARGET) $$input $$input2 $$input3 $$output; \
 	done
 
 evaluate: $(TARGET)
-	./Evaluator	./testcase/testcase1_MBFF_LIB_7000.lg	./testcase/testcase1_MBFF_LIB_7000.opt	testcase1_MBFF_LIB_7000_post.lg
+	./Evaluator	./testcase0 testcase0
 
 evaluateall: $(TARGET)
-	@for i in $(shell seq 0 3); do \
-		input=$$(echo $(INPUTS) | cut -d' ' -f$$((i+1))); \
-		input2=$$(echo $(INPUTS2) | cut -d' ' -f$$((i+1))); \
-		output=$$(echo $(OUTS) | cut -d' ' -f$$((i+1))); \
-		echo "Evaluating $$output..."; \
-		./Evaluator $$input $$input2 $$output; \
-	done
+	./Evaluator	./testcase0 testcase0
+	./Evaluator	./testcase1 testcase1
+	./Evaluator	./testcase2 testcase2
 
 clean:
-	rm -f $(TARGET) $(OUTS) *.png
+	rm -f $(TARGET) $(OUTS)

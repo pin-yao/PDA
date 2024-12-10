@@ -1,30 +1,31 @@
 // PDA Lab4, implement py pin-yao xu
 #include <iostream>
 #include <fstream>
-#include <vector>
-#include <string>
-#include <algorithm>
-#include <unordered_map>
-#include <list>
+#include "declare.h"
 
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-    ifstream infile_lg, infile_opt;
-    ofstream outfile, out;
-
-    infile_lg.open(argv[1], ios::in);
-    infile_opt.open(argv[2], ios::in);
-    outfile.open(argv[3], ios::out);
-    if (!infile_lg || !infile_opt || !outfile)
+    ifstream infile_gmp, infile_gcl, infile_cst;
+    ofstream outfile;
+    infile_gmp.open(argv[1], ios::in);
+    infile_gcl.open(argv[2], ios::in);
+    infile_cst.open(argv[3], ios::in);
+    outfile.open(argv[4], ios::out);
+    if (!infile_gmp || !infile_gcl || !infile_cst || !outfile)
     {
         cout << "Error opening files" << endl;
         return 1;
     }
 
-    infile_lg.close();
-    infile_opt.close();
+    GlobalRoute gr;
+    gr.readGMP(infile_gmp);
+    infile_gmp.close();
+    gr.readGCL(infile_gcl);
+    infile_gcl.close();
+    gr.readCST(infile_cst);
+    infile_cst.close();
+
     outfile.close();
 }
-
