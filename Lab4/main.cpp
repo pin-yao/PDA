@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
     infile_gcl.close();
     gr.readCST(infile_cst);
     infile_cst.close();
+    gr.printGMP();
 
     outfile.close();
 }

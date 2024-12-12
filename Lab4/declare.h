@@ -26,11 +26,13 @@ istream &operator>>(istream &in, POS &pos)
 
 struct GRID
 {
-    GRIDTYPE type = None;
-    int vCapacity;
-    int hCapacity;
+    GRIDTYPE type = None; // for check result
+    int vCapacity;        // bottomEdge
+    int hCapacity;        // leftEdge
     int vUsage = 0;
     int hUsage = 0;
+    double l1cost = 0;
+    double l2cost = 0;
 };
 
 class NET
@@ -65,12 +67,18 @@ public:
     void printGMP();
 
 private:
-    int gridW, gridH; // unit Grid Width, Grid Height
-    POS ra;           // Routing Area
+    int gridW, gridH; // single Grid Width and Grid Height
+
+    // below all normalized length
+    POS ra; // Routing Area
     int raW, raH;
-    POS c1, c2;               // Chip 1, Chip 2
-    int c1W, c1H;             // Chip 1
-    int c2W, c2H;             // Chip 2
+    POS c1, c2;   // Chip 1, Chip 2
+    int c1W, c1H; // Chip 1
+    int c2W, c2H; // Chip 2
+
+    // for cost function
+    double alpha, beta, gamma, delta, via;
+
     vector<vector<GRID>> gmp; // Grid Map
     vector<NET> nets;
 };
@@ -126,22 +134,57 @@ void GlobalRoute::readGMP(ifstream &infile)
         for (auto &net : nets)
         {
             if (net.id == id)
-            {   
+            {
                 net.setT(pos);
                 break;
             }
         }
     }
     setGMP();
-    printGMP();
 }
 
 void GlobalRoute::readGCL(ifstream &infile)
 {
+    string str;
+    infile >> str;                // .ec
+    for (int j = 0; j < raH; j++) // fast scan order
+    {
+        for (int i = 0; i < raW; i++)
+        {
+            infile >> gmp[i][j].hCapacity >> gmp[i][j].vCapacity;
+        }
+    }
 }
 
 void GlobalRoute::readCST(ifstream &infile)
 {
+    string str;
+    infile >> str; // .alpha
+    infile >> alpha;
+    infile >> str; // .beta
+    infile >> beta;
+    infile >> str; // .gamma
+    infile >> gamma;
+    infile >> str; // .delta
+    infile >> delta;
+    infile >> str; // .v
+    infile >> via;
+    infile >> str;                // .l
+    for (int j = 0; j < raH; j++) // fast scan order
+    {
+        for (int i = 0; i < raW; i++)
+        {
+            infile >> gmp[i][j].l1cost;
+        }
+    }
+    infile >> str;                // .l
+    for (int j = 0; j < raH; j++) // fast scan order
+    {
+        for (int i = 0; i < raW; i++)
+        {
+            infile >> gmp[i][j].l2cost;
+        }
+    }
 }
 
 void GlobalRoute::setGMP()
@@ -167,18 +210,25 @@ void GlobalRoute::setGMP()
     }
 }
 
-inline void GlobalRoute::printGMP()
+void GlobalRoute::printGMP()
 {
     for (int i = 0; i < raH; i++)
     {
         for (int j = 0; j < raW; j++)
         {
             if (gmp[j][raH - i - 1].type == None)
-                cout << "X" << "  ";
+                cout << "- ";
             else
-                cout << "O" << "  ";
+                cout << "s ";
         }
         cout << endl;
+    }
+    for (int j = 0; j < raH; j++) // fast scan order
+    {
+        for (int i = 0; i < raW; i++)
+        {
+
+        }
     }
 }
 
