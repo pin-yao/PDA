@@ -28,5 +28,8 @@ int main(int argc, char *argv[])
     infile_cst.close();
     gr.printGMP();
 
+    gr.a_star_all();
+    gr.printNETs(outfile);
+
     outfile.close();
 }
