@@ -1,5 +1,6 @@
 #ifndef DECLARE_H
 #define DECLARE_H
+
 #include <vector>
 #include <fstream>
 #include <string>
@@ -22,6 +23,12 @@ enum GRIDTYPE // for check gmp result
     S_or_T,
 };
 
+enum LAYER
+{
+    M1 = 1,
+    M2 = 2,
+};
+
 istream &operator>>(istream &in, POS &pos)
 {
     in >> pos.x >> pos.y;
@@ -42,7 +49,7 @@ struct GRID
 class NET
 {
 public:
-    NET() {};
+    NET() : s{0, 0}, t{0, 0}, id(0) {};
     POS s;
     POS t;
     int id;
@@ -74,23 +81,7 @@ struct Node
 
 inline int heuristic(Node *a, Node *b)
 {
-    return 0;
-    // return abs(a->x - b->x) + abs(a->y - b->y);
-}
-
-vector<POS> reconstruct_path(Node *node)
-{
-    vector<POS> path;
-    while (node)
-    {
-        POS temp;
-        temp.x = node->x;
-        temp.y = node->y;
-        path.push_back(temp);
-        node = node->parent;
-    }
-    reverse(path.begin(), path.end());
-    return path;
+    return abs(a->x - b->x)*10000 + abs(a->y - b->y)*10000;
 }
 
 class GlobalRoute
@@ -101,11 +92,12 @@ public:
     void readCST(ifstream &infile);
     void setGMP();
     void printGMP();
-    void printNETs(ostream &outfile);
     vector<Node *> get_neighbors(Node *node);
     void a_star(NET &net);
-    void a_star_all();
+    void a_star_all(ostream &outfile);
     double distance(Node *a, Node *b) { return abs(a->x - b->x) * gridW + abs(a->y - b->y) * gridH; }
+    POS getTrueCoord(POS pos) { return {(pos.x * gridW) + ra.x, (pos.y * gridH) + ra.y}; }
+    vector<POS> reconstruct_path(Node *node);
 
 private:
     int gridW, gridH; // single Grid Width and Grid Height
@@ -266,14 +258,6 @@ void GlobalRoute::printGMP()
     }
 }
 
-void GlobalRoute::printNETs(ostream &outfile)
-{
-    for (auto &net : nets)
-    {
-        net.printNET(outfile);
-    }
-}
-
 vector<Node *> GlobalRoute::get_neighbors(Node *node)
 {
     vector<Node *> neighbors;
@@ -294,15 +278,53 @@ vector<Node *> GlobalRoute::get_neighbors(Node *node)
     return neighbors;
 }
 
+vector<POS> GlobalRoute::reconstruct_path(Node *node)
+{
+    vector<POS> path;
+    POS temp;
+    temp.x = node->x;
+    temp.y = node->y;
+    path.push_back(temp);
+    node = node->parent;
+    while (node)
+    {
+        temp.x = node->x;
+        temp.y = node->y;
+        path.push_back(temp);
+        node = node->parent;
+    }
+    reverse(path.begin(), path.end());
+
+    // only want source, corner, target
+    vector<POS> result;
+    result.push_back(getTrueCoord(path[0])); // source
+    temp = path[0];
+    for (int i = 0; i < int(path.size()) - 1; i++)
+    {
+        if ((path[i + 1].x == temp.x) || (path[i + 1].y == temp.y)) // corner change both x and y position
+        {
+            continue;
+        }
+        temp = path[i];
+        result.push_back(getTrueCoord(path[i]));
+    }
+    result.push_back(getTrueCoord(path[path.size() - 1])); // target
+    //path.clear();
+    return result;
+}
+
 void GlobalRoute::a_star(NET &net)
 {
     Node *start = new Node(net.s.x, net.s.y);
     Node *goal = new Node(net.t.x, net.t.y);
-    struct CompareNodes {
-        bool operator()(Node *a, Node *b) {
+    struct CompareNodes
+    {
+        bool operator()(Node *a, Node *b)
+        {
             return a->f > b->f;
         }
     };
+    // min heap
     priority_queue<Node *, vector<Node *>, CompareNodes> open_set;
     vector<vector<bool>> closed_set(raW, vector<bool>(raH, false));
     start->g = 0;
@@ -321,7 +343,8 @@ void GlobalRoute::a_star(NET &net)
         }
 
         closed_set[current->x][current->y] = true;
-        cout << current->x << " " << current->y << endl;
+        cout << "current: " << current->x << " " << current->y << endl;
+        
         for (Node *neighbor : get_neighbors(current))
         {
             if (closed_set[neighbor->x][neighbor->y])
@@ -332,14 +355,14 @@ void GlobalRoute::a_star(NET &net)
 
             // double tentative_g = current->g + ((current->x == neighbor->x) ? gmp[neighbor->x][neighbor->y].l2cost : gmp[neighbor->x][neighbor->y].l1cost);
             double tentative_g = current->g + distance(neighbor, goal);
-            cout << "neighbor: " << neighbor->x << " " << neighbor->y << " tentative_g: " << tentative_g << " ";
             if (tentative_g < neighbor->g)
             {
                 neighbor->g = tentative_g;
                 neighbor->h = heuristic(neighbor, goal);
                 neighbor->f = neighbor->g + neighbor->h;
                 neighbor->parent = current;
-                open_set.push(neighbor);
+                if(closed_set[neighbor->x][neighbor->y] == false)
+                    open_set.push(neighbor);
             }
             else
             {
@@ -351,41 +374,51 @@ void GlobalRoute::a_star(NET &net)
     net.Route = vector<POS>(); // No path found
 }
 
-inline void GlobalRoute::a_star_all()
+inline void GlobalRoute::a_star_all(ostream &outfile)
 {
-    // for (auto &net : nets)
-    // {
-    //     a_star(net);
-    // }
-    a_star(nets[5]);
+    for (auto &net : nets)
+    {
+        a_star(net);
+        net.printNET(outfile);
+        net.Route.clear();
+    }
 }
 
 void NET::printNET(ostream &outfile)
 {
-    cout << "net " << id << " " << s.x << " " << s.y << " " << t.x << " " << t.y << endl;
     if (Route.size() == 0)
     {
-        cout << "no route" << endl;
+        outfile << "no route" << endl;
         return;
     }
+
     int i;
     string name = "n" + to_string(id);
-    outfile << name << " " << Route.size() - 2 << endl; // ignore source and target
-    outfile << "begin" << endl;
-    outfile << Route[0].x << " " << Route[0].y << " "; // source
-    POS temp = Route[0];
-    for (i = 0; i < Route.size() - 1; i++)
+    LAYER preLayer = M1, curLayer = M1;
+    outfile << name << endl;
+    for (i = 0; i < int(Route.size()) - 1; i++)
     {
-        if ((Route[i + 1].x == temp.x) || (Route[i + 1].y == temp.y)) // corner change both x and y position
+        if (Route[i].x == Route[i + 1].x)
         {
-            continue;
+            curLayer = M1;
         }
-        temp = Route[i];
-        outfile << Route[i].x << " " << Route[i].y << endl;
-        outfile << Route[i].x << " " << Route[i].y << " ";
+        else
+        {
+            curLayer = M2;
+        }
+        if (preLayer != curLayer)
+        {
+            outfile << "via" << endl;
+            preLayer = curLayer;
+        }
+        outfile << "M" << curLayer << " " << Route[i].x << " " << Route[i].y
+                << " " << Route[i + 1].x << " " << Route[i + 1].y << endl;
     }
-    outfile << Route[Route.size() - 1].x << " " << Route[Route.size() - 1].y << endl; // target
-    outfile << "end" << endl;
+    if (curLayer == M2)
+    {
+        outfile << "via" << endl;
+    }
+    outfile << ".end" << endl;
 }
 
 #endif

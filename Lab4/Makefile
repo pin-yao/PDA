@@ -1,6 +1,6 @@
 TARGET:= D2DGRter
 SRCS:= main.cpp
-CFLAGS:= -std=c++11
+CFLAGS:= -std=c++11 -Wall
 INPUTS := ./testcase0/testcase0.gmp ./testcase1/testcase1.gmp ./testcase2/testcase2.gmp
 INPUTS2 := ./testcase0/testcase0.gcl ./testcase1/testcase1.gcl ./testcase2/testcase2.gcl
 INPUTS3 := ./testcase0/testcase0.cst ./testcase1/testcase1.cst ./testcase2/testcase2.cst

@@ -26,10 +26,9 @@ int main(int argc, char *argv[])
     infile_gcl.close();
     gr.readCST(infile_cst);
     infile_cst.close();
-    gr.printGMP();
+    //gr.printGMP();
 
-    gr.a_star_all();
-    gr.printNETs(outfile);
+    gr.a_star_all(outfile);
 
     outfile.close();
 }
